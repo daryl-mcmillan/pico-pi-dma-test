@@ -102,24 +102,6 @@ int main() {
     commands[count++] = 0;
     commands[count++] = 0;
 
-
-    count = 0;
-    channel_config_set_sniff_enable(&c, true);
-    commands[count++] = (uint32_t)&val1;
-    commands[count++] = (uint32_t)&output;
-    commands[count++] = 1;
-    commands[count++] = c.ctrl;
-
-    commands[count++] = (uint32_t)&val2;
-    commands[count++] = (uint32_t)&doubleOutput;
-    commands[count++] = 1;
-    commands[count++] = c.ctrl;
-
-    commands[count++] = 0;
-    commands[count++] = 0;
-    commands[count++] = 0;
-    commands[count++] = 0;
-
     // configure control channel
     channel_config_set_sniff_enable(&c, false);
     channel_config_set_read_increment(&c, true);
