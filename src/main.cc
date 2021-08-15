@@ -101,6 +101,31 @@ int main() {
     commands[count++] = 0;
     commands[count++] = 0;
 
+    // configure control channel
+    channel_config_set_sniff_enable(&c, false);
+    channel_config_set_read_increment(&c, true);
+    channel_config_set_write_increment(&c, true);
+    channel_config_set_chain_to(&c, ctrl_channel);
+    /*
+    dma_channel_configure(
+        ctrl_channel,
+        &c,
+        &dma_hw->ch[data_channel].read_addr, // write all 4 control registers
+        &commands[0], // read address
+        4, // 1 command at a time
+        true // start
+    );
+    */
+
+    dma_channel_configure(
+        ctrl_channel,
+        &c,
+        &output,
+        &val1, // read address
+        1, // 1 command at a time
+        true // start
+    );
+
     for(;;) {
         printf("sniff: %d\n", dma_hw->sniff_data);
         printf("sum: %d\n", output);
