@@ -30,30 +30,76 @@ int main() {
         false // only enable for specific transfers
     );
 
-    int commands[1024];
+    uint32_t commands[1024];
     int count = 0;
 
     // CHx_READ_ADDR
     // CHx_WRITE_ADDR
     // CHx_TRANS_COUNT
     // CHx_CTRL_TRIG
-    
+
     // summing dma channel
-    // SNIFF_CTRL
-    // SNIFF_DATA
     // transfer count=1
     // chain to control channel
     // control dma channel
+
+    dma_channel_config c = dma_channel_get_default_config(data_channel);
+    channel_config_set_chain_to(&c, ctrl_channel);
+
     // steps:
     // copy zero to DMA checksum
+    channel_config_set_sniff_enable(&c, false);
+    commands[count++] = (uint32_t)&zero;
+    commands[count++] = (uint32_t)&(dma_hw->sniff_data);
+    commands[count++] = 1;
+    commands[count++] = c.ctrl;
     // copy val1 to scratch with summing
+    channel_config_set_sniff_enable(&c, true);
+    commands[count++] = (uint32_t)&val1;
+    commands[count++] = (uint32_t)&scratch;
+    commands[count++] = 1;
+    commands[count++] = c.ctrl;
     // copy val2 to scratch with summing
+    channel_config_set_sniff_enable(&c, true);
+    commands[count++] = (uint32_t)&val2;
+    commands[count++] = (uint32_t)&scratch;
+    commands[count++] = 1;
+    commands[count++] = c.ctrl;
     // copy val3 to scratch with summing
+    channel_config_set_sniff_enable(&c, true);
+    commands[count++] = (uint32_t)&val3;
+    commands[count++] = (uint32_t)&scratch;
+    commands[count++] = 1;
+    commands[count++] = c.ctrl;
     // copy val4 to scratch with summing
+    channel_config_set_sniff_enable(&c, true);
+    commands[count++] = (uint32_t)&val4;
+    commands[count++] = (uint32_t)&scratch;
+    commands[count++] = 1;
+    commands[count++] = c.ctrl;
     // copy DMA checksum to output (no summing)
+    channel_config_set_sniff_enable(&c, false);
+    commands[count++] = (uint32_t)&(dma_hw->sniff_data);
+    commands[count++] = (uint32_t)&output;
+    commands[count++] = 1;
+    commands[count++] = c.ctrl;
     // copy DMA checksum to scratch with summing
+    channel_config_set_sniff_enable(&c, true);
+    commands[count++] = (uint32_t)&(dma_hw->sniff_data);
+    commands[count++] = (uint32_t)&scratch;
+    commands[count++] = 1;
+    commands[count++] = c.ctrl;
     // copy DMA checksum to doubleOutput (no summing)
+    channel_config_set_sniff_enable(&c, false);
+    commands[count++] = (uint32_t)&(dma_hw->sniff_data);
+    commands[count++] = (uint32_t)&doubleOutput;
+    commands[count++] = 1;
+    commands[count++] = c.ctrl;
     // stop
+    commands[count++] = 0;
+    commands[count++] = 0;
+    commands[count++] = 0;
+    commands[count++] = 0;
 
     for(;;) {
         printf("sniff: %d\n", dma_hw->sniff_data);
