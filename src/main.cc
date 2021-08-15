@@ -6,6 +6,7 @@ int main() {
 
     stdio_init_all();
 
+    int extra = 5;
     int zero = 0;
     int scratch = 0;
     int output = 0;
@@ -101,28 +102,41 @@ int main() {
     commands[count++] = 0;
     commands[count++] = 0;
 
+
+    count = 0;
+    channel_config_set_sniff_enable(&c, true);
+    commands[count++] = (uint32_t)&val1;
+    commands[count++] = (uint32_t)&output;
+    commands[count++] = 1;
+    commands[count++] = c.ctrl;
+
+    commands[count++] = (uint32_t)&val2;
+    commands[count++] = (uint32_t)&doubleOutput;
+    commands[count++] = 1;
+    commands[count++] = c.ctrl;
+
+    commands[count++] = 0;
+    commands[count++] = 0;
+    commands[count++] = 0;
+    commands[count++] = 0;
+
     // configure control channel
     channel_config_set_sniff_enable(&c, false);
     channel_config_set_read_increment(&c, true);
     channel_config_set_write_increment(&c, true);
     channel_config_set_chain_to(&c, ctrl_channel);
-    /*
+    channel_config_set_ring(
+        &c,
+        true, // write ring
+        4 // 16 byte ring - 4 x 4 byte registers
+    );
+
     dma_channel_configure(
         ctrl_channel,
         &c,
         &dma_hw->ch[data_channel].read_addr, // write all 4 control registers
         &commands[0], // read address
         4, // 1 command at a time
-        true // start
-    );
-    */
-
-    dma_channel_configure(
-        ctrl_channel,
-        &c,
-        &output,
-        &val1, // read address
-        1, // 1 command at a time
         true // start
     );
 
