@@ -108,11 +108,14 @@ int main() {
     commands[count++] = 1;
     commands[count++] = c.ctrl;
 
-    // stop
-    commands[count++] = 0;
-    commands[count++] = 0;
-    commands[count++] = 0;
-    commands[count++] = 0;
+    // last command restarts the control channel
+    // no chaining because the write triggers the next transfer
+    channel_config_set_chain_to(&c, data_channel);
+    uint32_t commandBufferStart = (uint32_t)&commands[0];
+    commands[count++] = (uint32_t)&commandBufferStart;
+    commands[count++] = (uint32_t)&dma_hw->ch[ctrl_channel].al3_read_addr_trig;
+    commands[count++] = 1;
+    commands[count++] = c.ctrl;
 
     // configure control channel
     channel_config_set_sniff_enable(&c, false);
@@ -135,8 +138,8 @@ int main() {
     );
 
     for(;;) {
-        printf("sniff: %d\n", dma_hw->sniff_data);
         printf("sum: %d\n", output);
+        val1++;
         sleep_ms(1000);
     }
 }
