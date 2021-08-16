@@ -10,7 +10,6 @@ int main() {
     int zero = 0;
     int scratch = 0;
     int output = 0;
-    int doubleOutput = 0;
 
     int val1 = 3;
     int mult1 = 13;
@@ -138,7 +137,6 @@ int main() {
     for(;;) {
         printf("sniff: %d\n", dma_hw->sniff_data);
         printf("sum: %d\n", output);
-        printf("doublesum: %d\n", doubleOutput);
         sleep_ms(1000);
     }
 }
