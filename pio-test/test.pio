@@ -1,0 +1,28 @@
+.program test
+.side_set 2
+.wrap_target
+    // bit count in y
+    out y, 32      side 0b00
+    jmp y-- loop   side 0b10 [7]
+
+loop:
+
+    set x, 31      side 0b10 [7]
+delay1:
+    jmp x-- delay1 side 0b10 [7]
+    set x, 31      side 0b10 [7]
+delay2:
+    jmp x-- delay2 side 0b10 [7]
+
+    out pins, 1    side 0b10
+
+    set x, 31      side 0b11 [7]
+delay3:
+    jmp x-- delay3 side 0b11 [7]
+    set x, 31      side 0b11 [7]
+delay4:
+    jmp x-- delay4 side 0b11 [7]
+
+    jmp y-- loop   side 0b11 [7]
+    mov pins, null side 0b00 [7]
+.wrap
