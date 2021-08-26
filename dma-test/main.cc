@@ -1,12 +1,34 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/dma.h"
+#include "hardware/pio.h"
+#include "multiply.pio.h"
 
 int main() {
 
     stdio_init_all();
 
-    int extra = 5;
+    PIO pio = pio0;
+    uint program_offset = pio_add_program(pio, &multiply_program);
+    uint state_machine = 0;
+    pio_sm_config pio_config = multiply_program_get_default_config(program_offset);
+    sm_config_set_out_shift(&pio_config, /*shift_right?*/false, /*autopull?*/false, 32/*pull_threshold*/);
+    sm_config_set_in_shift(&pio_config, /*shift_right?*/true, /*autopush?*/true, 32/*push_threshold*/);
+    pio_sm_init(pio, state_machine, program_offset, &pio_config);
+    pio_sm_set_enabled(pio, state_machine, true);
+
+    uint32_t val = 3;
+    for( ;; ) {
+        pio_sm_put_blocking(pio, state_machine, val);
+        pio_sm_put_blocking(pio, state_machine, 0b1110010);
+        for( int i=0; i<16; i++ ) {
+            uint32_t result = pio_sm_get_blocking(pio, state_machine);
+            printf("result: %d\n", result);
+        }
+        sleep_ms(3000);
+        val++;
+    }
+
     int zero = 0;
     int scratch = 0;
     int output = 0;

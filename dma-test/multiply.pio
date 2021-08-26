@@ -1,0 +1,29 @@
+// no autopull
+// pull threshold 32 bits
+// out takes high bits - SHIFTCTRL_OUT_SHIFTDIR = left
+// autopush
+// push threshold 32 bits
+
+.program multiply
+.wrap_target
+    // get the value
+    pull block
+    out x, 32
+
+    // get the multiplier
+    pull block
+    out null, 16 // skip 16 high bits
+loop:
+    // test the next bit
+    out y, 1
+    jmp !y zero_bit
+    // if bit is 1 output the value
+    in x, 32
+    jmp next
+zero_bit:
+    // if bit is 0 output 0
+    in null, 32
+next:
+    // while there are more bits
+    jmp !OSRE loop
+.wrap
