@@ -78,18 +78,21 @@ int main() {
     commands[count++] = 1;
     commands[count++] = c.ctrl;
 
-    for( int sm = 0; sm < 4; sm++ ) {
-        // copy val x to state machine x
-        commands[count++] = (uint32_t)&val[sm];
-        commands[count++] = (uint32_t)&pio->txf[sm];
-        commands[count++] = 1;
-        commands[count++] = c.ctrl;
-        // copy mult x to state machine x
-        commands[count++] = (uint32_t)&mult[sm];
-        commands[count++] = (uint32_t)&pio->txf[sm];
-        commands[count++] = 1;
-        commands[count++] = c.ctrl;
-    }
+    // copy val 0-3 to state machine 0-3
+    channel_config_set_read_increment(&c, true);
+    channel_config_set_write_increment(&c, true);
+    commands[count++] = (uint32_t)&val[0];
+    commands[count++] = (uint32_t)&pio->txf[0];
+    commands[count++] = 4;
+    commands[count++] = c.ctrl;
+
+    // copy mult 0-3 to state machine 0-3
+    channel_config_set_read_increment(&c, true);
+    channel_config_set_write_increment(&c, true);
+    commands[count++] = (uint32_t)&mult[0];
+    commands[count++] = (uint32_t)&pio->txf[0];
+    commands[count++] = 4;
+    commands[count++] = c.ctrl;
 
     // enable summing for shift and add
     channel_config_set_sniff_enable(&c, true);
