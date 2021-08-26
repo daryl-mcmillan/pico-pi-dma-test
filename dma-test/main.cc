@@ -10,37 +10,43 @@ int main() {
 
     PIO pio = pio0;
     uint program_offset = pio_add_program(pio, &multiply_program);
-    uint state_machine = 0;
     pio_sm_config pio_config = multiply_program_get_default_config(program_offset);
     sm_config_set_out_shift(&pio_config, /*shift_right?*/false, /*autopull?*/false, 32/*pull_threshold*/);
     sm_config_set_in_shift(&pio_config, /*shift_right?*/true, /*autopush?*/true, 32/*push_threshold*/);
-    pio_sm_init(pio, state_machine, program_offset, &pio_config);
-    pio_sm_set_enabled(pio, state_machine, true);
+    pio_sm_init(pio, 0, program_offset, &pio_config);
+    pio_sm_init(pio, 1, program_offset, &pio_config);
+    pio_sm_init(pio, 2, program_offset, &pio_config);
+    pio_sm_init(pio, 3, program_offset, &pio_config);
+    pio_sm_set_enabled(pio, 0, true);
+    pio_sm_set_enabled(pio, 1, true);
+    pio_sm_set_enabled(pio, 2, true);
+    pio_sm_set_enabled(pio, 3, true);
 
-    uint32_t val = 3;
-    for( ;; ) {
-        pio_sm_put_blocking(pio, state_machine, val);
-        pio_sm_put_blocking(pio, state_machine, 0b1110010);
-        for( int i=0; i<16; i++ ) {
-            uint32_t result = pio_sm_get_blocking(pio, state_machine);
-            printf("result: %d\n", result);
-        }
-        sleep_ms(3000);
-        val++;
-    }
+    //for( ;; ) {
+    //    pio_sm_put_blocking(pio, 0, val);
+    //    pio_sm_put_blocking(pio, 0, 0b1110010);
+    //    for( int i=0; i<16; i++ ) {
+    //        uint32_t result = pio_sm_get_blocking(pio, 0);
+    //        printf("result: %d\n", result);
+    //    }
+    //    sleep_ms(3000);
+    //    val++;
+    //}
 
     int zero = 0;
     int scratch = 0;
     int output = 0;
 
-    int val1 = 3;
-    int mult1 = 13;
-    int val2 = 5;
-    int mult2 = 17;
-    int val3 = 7;
-    int mult3 = 19;
-    int val4 = 11;
-    int mult4 = 23;
+    int val[4];
+    int mult[4];
+    val[0] = 3;
+    mult[0] = 13;
+    val[1] = 5;
+    mult[1] = 17;
+    val[2] = 7;
+    mult[2] = 19;
+    val[3] = 11;
+    mult[3] = 23;
 
     int ctrl_channel = dma_claim_unused_channel(true);
     int data_channel = dma_claim_unused_channel(true);
@@ -55,76 +61,65 @@ int main() {
     uint32_t commands[1024];
     int count = 0;
 
-    // CHx_READ_ADDR
-    // CHx_WRITE_ADDR
-    // CHx_TRANS_COUNT
-    // CHx_CTRL_TRIG
+    // each command writes:
+    //   READ_ADDR
+    //   WRITE_ADDR
+    //   TRANS_COUNT
+    //   CTRL_TRIG
 
-    // summing dma channel
-    // transfer count=1
-    // chain to control channel
-    // control dma channel
-
+    // data_channel chains back to control channel
     dma_channel_config c = dma_channel_get_default_config(data_channel);
     channel_config_set_chain_to(&c, ctrl_channel);
-
-    // steps:
-    // copy zero to DMA checksum
     channel_config_set_sniff_enable(&c, false);
+
+    // copy zero to DMA checksum
     commands[count++] = (uint32_t)&zero;
     commands[count++] = (uint32_t)&(dma_hw->sniff_data);
     commands[count++] = 1;
     commands[count++] = c.ctrl;
-    
-    uint32_t mult_bit = 0b1000000000000000;
+
+    for( int sm = 0; sm < 4; sm++ ) {
+        // copy val x to state machine x
+        commands[count++] = (uint32_t)&val[sm];
+        commands[count++] = (uint32_t)&pio->txf[sm];
+        commands[count++] = 1;
+        commands[count++] = c.ctrl;
+        // copy mult x to state machine x
+        commands[count++] = (uint32_t)&mult[sm];
+        commands[count++] = (uint32_t)&pio->txf[sm];
+        commands[count++] = 1;
+        commands[count++] = c.ctrl;
+    }
+
+    // enable summing for shift and add
+    channel_config_set_sniff_enable(&c, true);
+    int mult_bits = 16;
     for( ;; ) {
-        // copy val1 to scratch with summing
-        if( mult1 & mult_bit ) {
-            channel_config_set_sniff_enable(&c, true);
-            commands[count++] = (uint32_t)&val1;
+        for( int sm = 0; sm < 4; sm++ ) {
+            // copy state machine output to scratch with summing
+            // wait for pio fifo ready
+            channel_config_set_dreq(&c, pio_get_dreq(pio, sm, /*is_tx?*/false));
+            commands[count++] = (uint32_t)&pio->rxf[sm];
             commands[count++] = (uint32_t)&scratch;
             commands[count++] = 1;
             commands[count++] = c.ctrl;
         }
-        // copy val2 to scratch with summing
-        if( mult2 & mult_bit ) {
-            channel_config_set_sniff_enable(&c, true);
-            commands[count++] = (uint32_t)&val2;
-            commands[count++] = (uint32_t)&scratch;
-            commands[count++] = 1;
-            commands[count++] = c.ctrl;
-        }
-        // copy val3 to scratch with summing
-        if( mult3 & mult_bit ) {
-            channel_config_set_sniff_enable(&c, true);
-            commands[count++] = (uint32_t)&val3;
-            commands[count++] = (uint32_t)&scratch;
-            commands[count++] = 1;
-            commands[count++] = c.ctrl;
-        }
-        // copy val4 to scratch with summing
-        if( mult4 & mult_bit ) {
-            channel_config_set_sniff_enable(&c, true);
-            commands[count++] = (uint32_t)&val4;
-            commands[count++] = (uint32_t)&scratch;
-            commands[count++] = 1;
-            commands[count++] = c.ctrl;
-        }
-        mult_bit = mult_bit >> 1;
-        if( mult_bit ) {
+        mult_bits--;
+        if( mult_bits == 0 ) {
+            break;
+        } else {
             // copy DMA checksum to scratch with summing
-            channel_config_set_sniff_enable(&c, true);
+            channel_config_set_dreq(&c, DREQ_FORCE); // no waiting
             commands[count++] = (uint32_t)&(dma_hw->sniff_data);
             commands[count++] = (uint32_t)&scratch;
             commands[count++] = 1;
             commands[count++] = c.ctrl;
-        } else {
-            break;
         }
     }
+    channel_config_set_sniff_enable(&c, false);
+    channel_config_set_dreq(&c, DREQ_FORCE); // no waiting
 
     // copy DMA checksum to output (no summing)
-    channel_config_set_sniff_enable(&c, false);
     commands[count++] = (uint32_t)&(dma_hw->sniff_data);
     commands[count++] = (uint32_t)&output;
     commands[count++] = 1;
@@ -161,7 +156,7 @@ int main() {
 
     for(;;) {
         printf("sum: %d\n", output);
-        val1++;
+        val[0]++;
         sleep_ms(1000);
     }
 }
