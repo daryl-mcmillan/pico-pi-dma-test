@@ -22,17 +22,6 @@ int main() {
     pio_sm_set_enabled(pio, 2, true);
     pio_sm_set_enabled(pio, 3, true);
 
-    //for( ;; ) {
-    //    pio_sm_put_blocking(pio, 0, val);
-    //    pio_sm_put_blocking(pio, 0, 0b1110010);
-    //    for( int i=0; i<16; i++ ) {
-    //        uint32_t result = pio_sm_get_blocking(pio, 0);
-    //        printf("result: %d\n", result);
-    //    }
-    //    sleep_ms(3000);
-    //    val++;
-    //}
-
     int zero = 0;
     int scratch = 0;
     int output = 0;
