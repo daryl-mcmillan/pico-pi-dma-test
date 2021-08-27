@@ -23,17 +23,18 @@ int main() {
     pio_sm_config c = test_program_get_default_config(offset);
     sm_config_set_out_pins(&c, data, 1);
     sm_config_set_sideset_pins(&c, clk);
-    //sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
-    sm_config_set_out_shift(&c, false/*shift_right*/, true/*autopull*/, 32/*pull_threshold*/);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+    sm_config_set_out_shift(&c, /*shift_right?*/false, /*autopull?*/true, /*pull_threshold*/32);
     pio_sm_init(pio, sm, offset, &c);
-    pio_sm_set_clkdiv_int_frac(pio, sm, 65535, 0);
+    pio_sm_set_clkdiv_int_frac(pio, sm, 4, 0);
     pio_sm_set_enabled(pio, sm, true);
+    int buffer_size = 52*240+2;
+    uint32_t buffer[buffer_size];
     for(;;) {
-        sleep_ms(2000);
-        pio->txf[sm] = 32;
-        sleep_ms(2000);
-        pio->txf[sm] = 0b11001100101010101100110011110001;
-        //sleep_ms(10000);
-        for(;;) {}
+        sleep_ms(100);
+        pio_sm_put_blocking(pio, sm, buffer_size * 4);
+        for( int i=0; i<buffer_size; i++ ) {
+            pio_sm_put_blocking(pio, sm, buffer[i]);
+        }
     }
 }

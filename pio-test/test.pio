@@ -1,28 +1,30 @@
 .program test
 .side_set 2
 .wrap_target
-    // bit count in y
-    out y, 32      side 0b00
-    jmp y-- loop   side 0b10 [7]
+start:
+
+    // read 32 bit byte count to x
+    out x, 32 side 0b00
+
+    // 96 cycle delay ( 3 us @ 32 MHz )
+    set y, 11          side 0b10 [7]
+start_idle:
+    jmp y-- start_idle side 0b10 [7]
+    jmp x-- loop       side 0b10 [7]
 
 loop:
+    // first bit
+    out pins, 1        side 0b10 [1]
+    mov x, x           side 0b11 [1]
 
-    set x, 31      side 0b10 [7]
-delay1:
-    jmp x-- delay1 side 0b10 [7]
-    set x, 31      side 0b10 [7]
-delay2:
-    jmp x-- delay2 side 0b10 [7]
+    // second bit
+    out pins, 1        side 0b10 [1]
+    out null, 6        side 0b11
+    jmp x-- loop       side 0b11
 
-    out pins, 1    side 0b10
+    // 32 cycle delay ( 1 us @ 32 MHz )
+    set y, 3           side 0b10 [7]
+end_idle:
+    jmp y-- end_idle   side 0b10 [7]
 
-    set x, 31      side 0b11 [7]
-delay3:
-    jmp x-- delay3 side 0b11 [7]
-    set x, 31      side 0b11 [7]
-delay4:
-    jmp x-- delay4 side 0b11 [7]
-
-    jmp y-- loop   side 0b11 [7]
-    mov pins, null side 0b00 [7]
 .wrap
