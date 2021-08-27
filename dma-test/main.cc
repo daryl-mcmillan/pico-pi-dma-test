@@ -61,13 +61,10 @@ int main() {
     channel_config_set_chain_to(&c, ctrl_channel);
     channel_config_set_sniff_enable(&c, false);
 
-    // copy zero to DMA checksum
-    commands[count++] = (uint32_t)&zero;
-    commands[count++] = (uint32_t)&(dma_hw->sniff_data);
-    commands[count++] = 1;
-    commands[count++] = c.ctrl;
-
     // copy val 0-3 to state machine 0-3
+    // no dreq
+    //   - lets us use 1 dma command to write all four state machines
+    //   - the state machine is fast enough that it's always waiting for the dma
     channel_config_set_read_increment(&c, true);
     channel_config_set_write_increment(&c, true);
     commands[count++] = (uint32_t)&val[0];
@@ -76,6 +73,7 @@ int main() {
     commands[count++] = c.ctrl;
 
     // copy mult 0-3 to state machine 0-3
+    // no dreq - same as above
     channel_config_set_read_increment(&c, true);
     channel_config_set_write_increment(&c, true);
     commands[count++] = (uint32_t)&mult[0];
@@ -83,25 +81,32 @@ int main() {
     commands[count++] = 4;
     commands[count++] = c.ctrl;
 
+    // copy zero to DMA checksum
+    // during this command the pio is working to start outputting values
+    // (needs 5 cycles after mult is written to the state machine)
+    commands[count++] = (uint32_t)&zero;
+    commands[count++] = (uint32_t)&(dma_hw->sniff_data);
+    commands[count++] = 1;
+    commands[count++] = c.ctrl;
+
     // enable summing for shift and add
     channel_config_set_sniff_enable(&c, true);
     int mult_bits = 16;
     for( ;; ) {
-        for( int sm = 0; sm < 4; sm++ ) {
-            // copy state machine output to scratch with summing
-            // wait for pio fifo ready
-            channel_config_set_dreq(&c, pio_get_dreq(pio, sm, /*is_tx?*/false));
-            commands[count++] = (uint32_t)&pio->rxf[sm];
-            commands[count++] = (uint32_t)&scratch;
-            commands[count++] = 1;
-            commands[count++] = c.ctrl;
-        }
+        // copy state machine output to scratch with summing
+        // don't wait for pio fifo ready - it will be ready 5 cycles after mult was written
+        channel_config_set_read_increment(&c, true);
+        channel_config_set_write_increment(&c, false);
+        commands[count++] = (uint32_t)&pio->rxf[0];
+        commands[count++] = (uint32_t)&scratch;
+        commands[count++] = 1;
+        commands[count++] = c.ctrl;
+
         mult_bits--;
         if( mult_bits == 0 ) {
             break;
         } else {
             // copy DMA checksum to scratch with summing
-            channel_config_set_dreq(&c, DREQ_FORCE); // no waiting
             commands[count++] = (uint32_t)&(dma_hw->sniff_data);
             commands[count++] = (uint32_t)&scratch;
             commands[count++] = 1;
@@ -109,7 +114,6 @@ int main() {
         }
     }
     channel_config_set_sniff_enable(&c, false);
-    channel_config_set_dreq(&c, DREQ_FORCE); // no waiting
 
     // copy DMA checksum to output (no summing)
     commands[count++] = (uint32_t)&(dma_hw->sniff_data);
