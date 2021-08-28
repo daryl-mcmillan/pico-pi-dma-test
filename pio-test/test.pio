@@ -15,7 +15,7 @@ start_idle:
 loop:
     // first bit
     out pins, 1        side 0b10 [1]
-    mov x, x           side 0b11 [1]
+    nop                side 0b11 [1]
 
     // second bit
     out pins, 1        side 0b10 [1]
