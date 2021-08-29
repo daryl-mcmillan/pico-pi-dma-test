@@ -13,12 +13,20 @@ uint8_t reverseBits( uint8_t b ) {
     return result;
 }
 
-uint32_t byteToWord( uint8_t b ) {
-    uint32_t w = b;
-    return (w & 0b11000000) << 24
-        | (w & 0b00110000) << (16+2)
-        | (w & 0b00001100) << (8+4)
-        | (w & 0b00000011) << (0+6);
+uint32_t byteToWord( uint8_t b1, uint8_t b2 ) {
+    uint32_t w1 = b1;
+    uint32_t w2 = b2;
+    return
+        // even row
+        (w1 & 0b11000000) << 24
+        | (w1 & 0b00110000) << (16+2)
+        | (w1 & 0b00001100) << (8+4)
+        | (w1 & 0b00000011) << (0+6)
+        // odd row
+        | (w2 & 0b11000000) << (24-2)
+        | (w2 & 0b00110000) << (16)
+        | (w2 & 0b00001100) << (8+2)
+        | (w2 & 0b00000011) << (0+4);
 }
 
 int main() {
@@ -48,18 +56,18 @@ int main() {
     int buffer_size = 52*240+2;
     uint32_t buffer[buffer_size];
     int count = 0;
-    buffer[count++] = byteToWord(0b10000000);
+    buffer[count++] = byteToWord(0b10000000, 0b10000000);
     for( int row=1; row<=240; row++ ) {
-        buffer[count++] = byteToWord( reverseBits( row ) );
+        buffer[count++] = byteToWord( reverseBits( row ), reverseBits( row ) );
         // data
         for( int col=0; col<50; col++ ) {
-            buffer[count++] = byteToWord( 0b11110000 );
+            buffer[count++] = byteToWord( 0b11110000, 0b00001111 );
         }
         buffer[count++] = 0;
     }
     buffer[count++] = 0;
     for(;;) {
-        buffer[0] ^= byteToWord(0b01000000);
+        buffer[0] ^= byteToWord(0b01000000, 0b01000000);
         sleep_ms(100);
         pio_sm_put_blocking(pio, sm, buffer_size * 4);
         for( int i=0; i<buffer_size; i++ ) {
